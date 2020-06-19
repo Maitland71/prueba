@@ -1,0 +1,138 @@
+---
+title: "lab#4"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Paquete para manejo de datos vectoriales
+library(sf)
+# Paquete de Tidyverse para manipulación de datos
+library(dplyr)
+# Paquete para mapas en la Web
+library(leaflet)
+# Carga del paquete raster
+library(raster)
+# Carga del paquete rgdal
+library(rgdal)
+#$#
+library(knitr)
+#$#
+library(kableExtra)
+
+setwd("A:/Kenneth UCR/Procesamiento de datos geograficos/laboratorio 10")
+
+# Registros de presencia de Ara ambiguus (lapa verde) en Costa Rica
+Lapa_verde <-  st_read("https://raw.githubusercontent.com/geoprocesamiento-2020i/datos/master/biodiversidad/registros-presencia/cr/cr-ara-ambiguus.geojson")
+
+
+Quetzal <-  st_read("https://raw.githubusercontent.com/geoprocesamiento-2020i/datos/master/biodiversidad/registros-presencia/cr/cr_pharomachrus_mocinno.geojson")
+
+
+
+# Directorio de trabajo
+
+
+
+# Datos de altitud
+Altitud <- getData("worldclim", var="alt", res=.5, lon=-84, lat=10)
+
+cr_altitud <- crop(Altitud, extent(-86, -82.3, 8, 11.3)) 
+
+
+
+
+# Datos de Precipitación
+bio <- getData("worldclim", var="bio", res=.5, lon=-84, lat=10)
+
+cr_bio <- crop(bio, extent(-86, -82.3, 8, 11.3)) 
+
+
+#colores
+
+pal <- colorNumeric(
+  c("#0C2C84", "#41B6C4", "#FFFFCC"), 
+  values(cr_altitud), 
+  na.color = "transparent"
+)
+
+palp <- colorNumeric(
+  c("RdBu"), 
+  values(cr_bio$bio12_23), 
+  na.color = "transparent"
+)
+
+
+```
+
+
+
+```{r}
+
+# Mapa web
+m <- leaflet() %>% 
+  addProviderTiles(providers$Esri.WorldImagery, group = "Imágenes de ESRI") %>% 
+  addProviderTiles(providers$Stamen.TonerLite, group = "Stamen Toner Lite") %>%
+  addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%
+  addCircleMarkers(data = Lapa_verde,
+                   stroke = F,
+                   radius = 4,
+                   fillColor = 'green',
+                   fillOpacity = 1,
+                   group = "Lapa Verde",
+                   popup = paste(Lapa_verde$locality, 
+                                 Lapa_verde$year, 
+                                 sep = '<br/>'
+                   )
+  ) %>%
+  addCircleMarkers(data = Quetzal,
+                   stroke = F,
+                   radius = 4,
+                   fillColor = 'Black',
+                   fillOpacity = 1,
+                   group = "Quetzal",
+                   popup = paste(Quetzal$locality, 
+                                 Quetzal$year, 
+                                 sep = '<br/>'
+                   )
+  ) %>%
+  addRasterImage(cr_altitud, 
+                 colors = pal, 
+                 opacity = 0.8, 
+                 group = "Altitud"
+                 
+  ) %>%
+  addRasterImage(cr_bio$bio12_23, 
+                 colors = palp, 
+                 opacity = 0.8, 
+                 group = "Precipitacion"
+  ) %>%
+  addLayersControl(
+    baseGroups = c("OpenStreetMap", "Stamen Toner Lite", "Imágenes de ESRI"),
+    overlayGroups = c("Altitud", "Precipitacion","Lapa Verde","Quetzal"),
+    options = layersControlOptions(collapsed = FALSE)    
+  ) %>%
+  addLegend(pal = pal, 
+            values = values(cr_altitud), 
+            title = "Altitud"
+  ) %>%
+  addLegend(pal = palp, 
+            values = values(cr_bio$bio12_23),
+            position = "topleft" ,
+            title = "Precipitacion"
+  ) %>%
+  addMiniMap(
+    toggleDisplay = TRUE,
+    position = "bottomleft",
+    tiles = providers$Stamen.TonerLite
+  )
+
+m
+
+```
+
+
+
+```
